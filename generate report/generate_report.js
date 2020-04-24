@@ -1,38 +1,39 @@
 const axios = require('axios');
-// const config = require('./config.json');
-const report  = require('./sampleData.json')
+const config = require('./config.json');
 const fs = require('fs');
 
 
-// var getReports = function(clientId) {
-//   var allReports = [];
-//   for (var i = 0; i < clientId.length; i++) {
-//     var singleClientReport = [];
-//     for (var j = 0; j < timestamps.length; j++) {
-//       query = {
-//         "login": {
-//           "oauth_key": config.oauth
-//         },
-//         "user": {
-//           "fingerprint": config.fingerprint
-//         },
-//         "filter": {
-//           "query": {"client_id" : clientId[i], "time_stamp" : {"$gte" : timeStamps[j][0], "$lte" : timeStamps[j][1]}},
-//           "show_report": true
-//         }
-//       }
-//       axios.post(config.url, JSON.stringify(query))
-  //       .then(function(monthly_report) {
-  //         singleClientReport.push(monthly_report);
-  //       })
-  //       .catch(function(error) {
-  //         console.log(error)
-  //       }) 
-//     }
-//     allReports.push(singleClientReport)
-//   }
-//   generateBulkReport(allReports)
-// }
+var getReports = async function(clientId, timestamps) {// this becomes an async function
+  var allReports = [];
+  for (var i = 0; i < clientId.length; i++) {
+    var singleClientReport = [];
+    for (var j = 0; j < timestamps.length; j++) {
+      query = {
+        "login": {
+          "oauth_key": `${config.oauth}`
+        },
+        "user": {
+          "fingerprint": `${config.fingerprint}`
+        },
+        "filter": {
+          "page" : 1,
+        "query": `{\"client_id\" : \"${clientId[i]}\", \"time_stamp\" : {\"$gte\" : ${timestamps[j][0]}, \"$lte\" : ${timestamps[j][1]}}}`,
+        "show_report": true
+        }
+      }
+      try {
+          const monthly_report = (await axios.post(config.url, query)).data.reports[0]
+          singleClientReport.push(monthly_report);
+          // console.log(monthly_report)
+        } catch(error) {
+          console.log(error)
+        } 
+    }
+    allReports.push(singleClientReport)
+  }
+  // console.log(allReports)
+  generateBulkReport(allReports)
+}
 
 var generateReport = function(reports) {
   var data = {};
@@ -91,6 +92,7 @@ var amount_count = function(node, internal_external, data) { //Iterating through
       if (!data[internal_external][types]) {
         data[internal_external][types] = {}
       }
+
       if (data[internal_external][types][count]) {
         data[internal_external][types][count].push(node[types][count])
       } else {
@@ -125,6 +127,7 @@ var convertToArray = function(object) {
 
 var generateBulkReport = function(report) {
   var allPlatorms = {}
+  // console.log(report)
   for (var i = 0; i < report.length; i++) {
     var currentPlatformId = report[i][0]["client_id"]
     allPlatorms[currentPlatformId] = generateReport(report[i])
@@ -150,7 +153,10 @@ var generateBulkReport = function(report) {
   }
 }
 
-generateBulkReport(report.report)
+// generateBulkReport(report.report)
 
-// getReports(client_id, timestamps)
+client_id = ["5c803a7260e6d4002ccfb16e"];
+timestamps =[ [1575187200000, 1577865600000]]
+
+getReports(client_id, timestamps)
 
