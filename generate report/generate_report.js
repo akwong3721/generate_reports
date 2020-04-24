@@ -31,7 +31,6 @@ var getReports = async function(clientId, timestamps) {// this becomes an async 
     }
     allReports.push(singleClientReport)
   }
-  // console.log(allReports)
   generateBulkReport(allReports)
 }
 
@@ -92,7 +91,6 @@ var amount_count = function(node, internal_external, data) { //Iterating through
       if (!data[internal_external][types]) {
         data[internal_external][types] = {}
       }
-
       if (data[internal_external][types][count]) {
         data[internal_external][types][count].push(node[types][count])
       } else {
@@ -113,21 +111,23 @@ var convertToArray = function(object) {
       if (Array.isArray(checkArray)) { //If it contains an inner array
         outerHeader.push('')
         joined = outerHeader.concat(checkArray)
-      } else { //There's an extra object and we need to convert the dat to an array
-        for (var innerHeader in checkArray) {
-          outerHeader = [report, keys, innerHeader]
-          joined = outerHeader.concat(checkArray[innerHeader])
-        }
+        platformData.push(joined)
+      } else { 
+          for (var innerHeader in checkArray) {
+            outerHeader = [report, keys, innerHeader]
+            joined = outerHeader.concat(checkArray[innerHeader])
+            platformData.push(joined)
+          }
       }
-      platformData.push(joined)
+      // platformData.push(joined)
     }
   }
+  console.log(platformData)
   return platformData;
 }
 
 var generateBulkReport = function(report) {
   var allPlatorms = {}
-  // console.log(report)
   for (var i = 0; i < report.length; i++) {
     var currentPlatformId = report[i][0]["client_id"]
     allPlatorms[currentPlatformId] = generateReport(report[i])
@@ -156,7 +156,7 @@ var generateBulkReport = function(report) {
 // generateBulkReport(report.report)
 
 client_id = ["5c803a7260e6d4002ccfb16e"];
-timestamps =[ [1575187200000, 1577865600000]]
+timestamps =[ [1575187200000, 1577865600000], [1577865600000, 1580543940000]]
 
 getReports(client_id, timestamps)
 
