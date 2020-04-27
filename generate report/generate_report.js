@@ -46,19 +46,32 @@ var generateReport = function(reports, timeframe) {
     var internal_nodes = reports[i]["internal_nodes"];
     var external_nodes = reports[i]["external_nodes"];
     var rdc_report = reports[i]["rdc_report"];
+    var ach_report = reports[i]["ach_report"];
     var interchange_report = reports[i]["interchange_report"];
-    user_and_report_count(user_permissions, "user_permissions", data)
-    user_and_report_count(rdc_report, "rdc_report", data)
-    user_and_report_count(interchange_report, "interchange_report", data)
-    user_and_report_count(user_flags, "user", data)
-    user_and_report_count(checking_subnets, "checking_subnets", data)
+    var ofac_matches = reports[i]["ofac_matches"]
+    console.log(ofac_matches)
+    user_and_report_count(user_permissions, "user_permissions", data);
+    user_and_report_count(rdc_report, "rdc_report", data);
+    user_and_report_count(ach_report, "ach_report", data);
+    user_and_report_count(interchange_report, "interchange_report", data);
+    user_and_report_count(user_flags, "user", data);
+    user_and_report_count(checking_subnets, "checking_subnets", data);
     user_and_report_count(debit_card_subnets, "debit_card_subets", data);
-    amount_count(transactions, "transactions", data)
-    amount_count(internal_nodes, "internal_nodes", data)
-    amount_count(external_nodes, "external_nodes", data)
-    amount_count(balances, "balances", data)
+    amount_count(transactions, "transactions", data);
+    amount_count(internal_nodes, "internal_nodes", data);
+    amount_count(external_nodes, "external_nodes", data);
+    amount_count(balances, "balances", data);
+    getOfacMatches(ofac_matches, "ofac_matches", data);
   }
+  console.log(JSON.stringify(data))
   return data;
+}
+
+var getOfacMatches = function(matches, type, data) { //Ofac matches are key values, no need to iterate through object
+  if (!data["user"][type]) {
+    data["user"][type] = []
+  }
+  data["user"][type].push(matches)
 }
 
 var user_and_report_count = function(count, type, data) { //Iterating through single objects
@@ -183,7 +196,9 @@ var generateBulkReport = function(report, timeframe) {
   }
 }
 
-client_id = ["5c803a7260e6d4002ccfb16e", "5d146873c71b3900727f6cdb"];
+client_id = [
+  "5c803a7260e6d4002ccfb16e"
+];
 timestamps =[[1577865600000, 1580500740000], [1580544000000, 1583006340000], [1583049600000, 1585638000000]]
 //[1575187200000, 1577865540000],  DECEMBER
 getReports(client_id, timestamps)
