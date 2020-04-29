@@ -49,21 +49,19 @@ var generateReport = function(reports, timeframe) {
     var ach_report = reports[i]["ach_report"];
     var interchange_report = reports[i]["interchange_report"];
     var ofac_matches = reports[i]["ofac_matches"]
-    console.log(ofac_matches)
     user_and_report_count(user_permissions, "user_permissions", data);
     user_and_report_count(rdc_report, "rdc_report", data);
     user_and_report_count(ach_report, "ach_report", data);
     user_and_report_count(interchange_report, "interchange_report", data);
     user_and_report_count(user_flags, "user", data);
     user_and_report_count(checking_subnets, "checking_subnets", data);
-    user_and_report_count(debit_card_subnets, "debit_card_subets", data);
+    user_and_report_count(debit_card_subnets, "debit_card_subnets", data);
     amount_count(transactions, "transactions", data);
     amount_count(internal_nodes, "internal_nodes", data);
     amount_count(external_nodes, "external_nodes", data);
     amount_count(balances, "balances", data);
     getOfacMatches(ofac_matches, "ofac_matches", data);
   }
-  console.log(JSON.stringify(data))
   return data;
 }
 
@@ -181,13 +179,13 @@ var generateBulkReport = function(report, timeframe) {
   var headers = ["type", "outerscope (if applicable)", "inner_scope", "January", "February", "March"]
   for (platform in allPlatorms) {
     var platform_id = platform;
-    fs.writeFile(platform_id + '.csv', headers + '\n', (err) => { //Creates header
+    fs.writeFile('./qbr_reports/' +platform_id + '.csv', headers + '\n', (err) => { //Creates header
       if (err) {
         return;
       }
     })
     for (var i = 0; i < allPlatorms[platform].length; i++) { 
-      fs.appendFile(platform_id + '.csv', allPlatorms[platform][i] + '\n', (err) => { //Add report to same file 
+      fs.appendFile('./qbr_reports/' + platform_id + '.csv', allPlatorms[platform][i] + '\n', (err) => { //Add report to same file 
         if (err) {
           return;
         } 
@@ -197,7 +195,6 @@ var generateBulkReport = function(report, timeframe) {
 }
 
 client_id = [
-  "5c803a7260e6d4002ccfb16e"
 ];
 timestamps =[[1577865600000, 1580500740000], [1580544000000, 1583006340000], [1583049600000, 1585638000000]]
 //[1575187200000, 1577865540000],  DECEMBER
