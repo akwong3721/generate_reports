@@ -3,7 +3,7 @@ const config = require('./config.json');
 const fs = require('fs');
 
 
-var getReports = async function(clientId, timestamps) {// this becomes an async function
+var getReports = async function (clientId, timestamps) {// this becomes an async function
   var allReports = [];
   for (var i = 0; i < clientId.length; i++) {
     var singleClientReport = [];
@@ -16,25 +16,25 @@ var getReports = async function(clientId, timestamps) {// this becomes an async 
           "fingerprint": `${config.fingerprint}`
         },
         "filter": {
-          "page" : 1,
-        "query": `{\"client_id\" : \"${clientId[i]}\", \"time_stamp\" : {\"$gte\" : ${timestamps[j][0]}, \"$lte\" : ${timestamps[j][1]}}}`,
-        "show_report": true
+          "page": 1,
+          "query": `{\"client_id\" : \"${clientId[i]}\", \"time_stamp\" : {\"$gte\" : ${timestamps[j][0]}, \"$lte\" : ${timestamps[j][1]}}}`,
+          "show_report": true
         }
       }
       try {
-          const monthly_report = (await axios.post(config.url, query)).data.reports[0]
-          singleClientReport.push(monthly_report);
-          // console.log(monthly_report)
-        } catch(error) {
-          console.log(error)
-        } 
+        const monthly_report = (await axios.post(config.url, query)).data.reports[0]
+        singleClientReport.push(monthly_report);
+        // console.log(monthly_report)
+      } catch (error) {
+        console.log(error)
+      }
     }
     allReports.push(singleClientReport)
   }
   generateBulkReport(allReports, timestamps.length)
 }
 
-var generateReport = function(reports, timeframe) {
+var generateReport = function (reports, timeframe) {
   var data = {};
   for (var i = 0; i < reports.length; i++) {
     var checking_subnets = reports[i]["checking_subnets"];
@@ -65,14 +65,14 @@ var generateReport = function(reports, timeframe) {
   return data;
 }
 
-var getOfacMatches = function(matches, type, data) { //Ofac matches are key values, no need to iterate through object
+var getOfacMatches = function (matches, type, data) { //Ofac matches are key values, no need to iterate through object
   if (!data["user"][type]) {
     data["user"][type] = []
   }
   data["user"][type].push(matches)
 }
 
-var user_and_report_count = function(count, type, data) { //Iterating through single objects
+var user_and_report_count = function (count, type, data) { //Iterating through single objects
   if (!data[type]) {
     data[type] = {}
   }
@@ -95,7 +95,7 @@ var user_and_report_count = function(count, type, data) { //Iterating through si
   return data;
 }
 
-var amount_count = function(node, internal_external, data) { //Iterating through nested objects
+var amount_count = function (node, internal_external, data) { //Iterating through nested objects
   if (!data[internal_external]) {
     data[internal_external] = {}
   }
@@ -118,9 +118,9 @@ var amount_count = function(node, internal_external, data) { //Iterating through
   return data;
 }
 
-var convertToArray = function(object) {
+var convertToArray = function (object) {
   var platformData = [];
-  for (var report in object) { 
+  for (var report in object) {
     for (var keys in object[report]) {
       var outerHeader = [report, keys];
       var checkArray = object[report][keys];
@@ -129,12 +129,12 @@ var convertToArray = function(object) {
         outerHeader.push('');
         joined = outerHeader.concat(checkArray);
         platformData.push(joined);
-      } else { 
-          for (var innerHeader in checkArray) {
-            outerHeader = [report, keys, innerHeader];
-            joined = outerHeader.concat(checkArray[innerHeader]);
-            platformData.push(joined);
-          }
+      } else {
+        for (var innerHeader in checkArray) {
+          outerHeader = [report, keys, innerHeader];
+          joined = outerHeader.concat(checkArray[innerHeader]);
+          platformData.push(joined);
+        }
       }
       // platformData.push(joined)
     }
@@ -143,11 +143,11 @@ var convertToArray = function(object) {
   return platformData;
 }
 
-var deleteUnnecessaryRows = function(platform){
+var deleteUnnecessaryRows = function (platform) {
   var necessaryRows = [];
   var actualData = [];
   for (var i = 0; i < platform.length; i++) {
-    actualData =  platform[i].slice(3)
+    actualData = platform[i].slice(3)
     var count = 0;
     for (var j = 0; j < actualData.length; j++) {
       if (actualData[j] === null || actualData[j] === 0) {
@@ -162,7 +162,7 @@ var deleteUnnecessaryRows = function(platform){
 }
 
 
-var generateBulkReport = function(report, timeframe) {
+var generateBulkReport = function (report, timeframe) {
   var allPlatorms = {}
   for (var i = 0; i < report.length; i++) {
     var currentPlatformId = report[i][0]["client_id"]
@@ -179,24 +179,32 @@ var generateBulkReport = function(report, timeframe) {
   var headers = ["type", "outerscope (if applicable)", "inner_scope", "January", "February", "March"]
   for (platform in allPlatorms) {
     var platform_id = platform;
-    fs.writeFile('./qbr_reports/' +platform_id + '.csv', headers + '\n', (err) => { //Creates header
+    var dir = './qbr_reports/';
+
+    if (!fs.existsSync(dir)) {
+      fs.mkdirSync(dir);
+    }
+
+    fs.writeFile(dir + platform_id + '.csv', headers + '\n', (err) => { //Creates header
       if (err) {
         return;
       }
     })
-    for (var i = 0; i < allPlatorms[platform].length; i++) { 
-      fs.appendFile('./qbr_reports/' + platform_id + '.csv', allPlatorms[platform][i] + '\n', (err) => { //Add report to same file 
+
+    for (var i = 0; i < allPlatorms[platform].length; i++) {
+      fs.appendFile(dir + platform_id + '.csv', allPlatorms[platform][i] + '\n', (err) => { //Add report to same file 
         if (err) {
           return;
-        } 
+        }
       })
     }
   }
 }
 
 client_id = [
+  "5bf3310edb5a562a381700ee"
 ];
-timestamps =[[1577865600000, 1580500740000], [1580544000000, 1583006340000], [1583049600000, 1585638000000]]
+timestamps = [[1577865600000, 1580500740000], [1580544000000, 1583006340000], [1583049600000, 1585638000000]]
 //[1575187200000, 1577865540000],  DECEMBER
 getReports(client_id, timestamps)
 
