@@ -31,10 +31,10 @@ var getReports = async function(clientId, timestamps) {// this becomes an async 
     }
     allReports.push(singleClientReport)
   }
-  generateBulkReport(allReports)
+  generateBulkReport(allReports, timestamps.length)
 }
 
-var generateReport = function(reports) {
+var generateReport = function(reports, timeframe) {
   var data = {};
   for (var i = 0; i < reports.length; i++) {
     var checking_subnets = reports[i]["checking_subnets"];
@@ -46,19 +46,30 @@ var generateReport = function(reports) {
     var internal_nodes = reports[i]["internal_nodes"];
     var external_nodes = reports[i]["external_nodes"];
     var rdc_report = reports[i]["rdc_report"];
+    var ach_report = reports[i]["ach_report"];
     var interchange_report = reports[i]["interchange_report"];
-    user_and_report_count(user_permissions, "user_permissions", data)
-    user_and_report_count(rdc_report, "rdc_report", data)
-    user_and_report_count(interchange_report, "interchange_report", data)
-    user_and_report_count(user_flags, "user", data)
-    user_and_report_count(checking_subnets, "checking_subnets", data)
-    user_and_report_count(debit_card_subnets, "debit_card_subets", data);
-    amount_count(transactions, "transactions", data)
-    amount_count(internal_nodes, "internal_nodes", data)
-    amount_count(external_nodes, "external_nodes", data)
-    amount_count(balances, "balances", data)
+    var ofac_matches = reports[i]["ofac_matches"]
+    user_and_report_count(user_permissions, "user_permissions", data);
+    user_and_report_count(rdc_report, "rdc_report", data);
+    user_and_report_count(ach_report, "ach_report", data);
+    user_and_report_count(interchange_report, "interchange_report", data);
+    user_and_report_count(user_flags, "user", data);
+    user_and_report_count(checking_subnets, "checking_subnets", data);
+    user_and_report_count(debit_card_subnets, "debit_card_subnets", data);
+    amount_count(transactions, "transactions", data);
+    amount_count(internal_nodes, "internal_nodes", data);
+    amount_count(external_nodes, "external_nodes", data);
+    amount_count(balances, "balances", data);
+    getOfacMatches(ofac_matches, "ofac_matches", data);
   }
   return data;
+}
+
+var getOfacMatches = function(matches, type, data) { //Ofac matches are key values, no need to iterate through object
+  if (!data["user"][type]) {
+    data["user"][type] = []
+  }
+  data["user"][type].push(matches)
 }
 
 var user_and_report_count = function(count, type, data) { //Iterating through single objects
@@ -74,10 +85,12 @@ var user_and_report_count = function(count, type, data) { //Iterating through si
     }
     totalUsers += count[permission]
   }
-  if (data[type]["total_users"]) {
-    data[type]["total_users"].push(totalUsers)
-  } else {
-    data[type]["total_users"] = [totalUsers]
+  if (type === "user_permissions") {
+    if (data[type]["total_users"]) {
+      data[type]["total_users"].push(totalUsers)
+    } else {
+      data[type]["total_users"] = [totalUsers]
+    }
   }
   return data;
 }
@@ -87,6 +100,7 @@ var amount_count = function(node, internal_external, data) { //Iterating through
     data[internal_external] = {}
   }
   for (var types in node) {
+    var nullCount = 0;
     for (var count in node[types]) {
       if (!data[internal_external][types]) {
         data[internal_external][types] = {}
@@ -95,6 +109,9 @@ var amount_count = function(node, internal_external, data) { //Iterating through
         data[internal_external][types][count].push(node[types][count])
       } else {
         data[internal_external][types][count] = [node[types][count]]
+      }
+      if (node[types][count] === 0 || node[types][count] === null) {
+        nullCount++;
       }
     }
   }
@@ -109,42 +126,66 @@ var convertToArray = function(object) {
       var checkArray = object[report][keys];
       var joined = [];
       if (Array.isArray(checkArray)) { //If it contains an inner array
-        outerHeader.push('')
-        joined = outerHeader.concat(checkArray)
-        platformData.push(joined)
+        outerHeader.push('');
+        joined = outerHeader.concat(checkArray);
+        platformData.push(joined);
       } else { 
           for (var innerHeader in checkArray) {
-            outerHeader = [report, keys, innerHeader]
-            joined = outerHeader.concat(checkArray[innerHeader])
-            platformData.push(joined)
+            outerHeader = [report, keys, innerHeader];
+            joined = outerHeader.concat(checkArray[innerHeader]);
+            platformData.push(joined);
           }
       }
       // platformData.push(joined)
     }
   }
-  console.log(platformData)
+  // console.log(platformData)
   return platformData;
 }
 
-var generateBulkReport = function(report) {
+var deleteUnnecessaryRows = function(platform){
+  var necessaryRows = [];
+  var actualData = [];
+  for (var i = 0; i < platform.length; i++) {
+    actualData =  platform[i].slice(3)
+    var count = 0;
+    for (var j = 0; j < actualData.length; j++) {
+      if (actualData[j] === null || actualData[j] === 0) {
+        count++;
+      }
+    }
+    if (count !== actualData.length) {
+      necessaryRows.push(platform[i]);
+    }
+  }
+  return necessaryRows
+}
+
+
+var generateBulkReport = function(report, timeframe) {
   var allPlatorms = {}
   for (var i = 0; i < report.length; i++) {
     var currentPlatformId = report[i][0]["client_id"]
     allPlatorms[currentPlatformId] = generateReport(report[i])
   }
-  for (platforms in allPlatorms) {
+  for (var platforms in allPlatorms) {
     allPlatorms[platforms] = convertToArray(allPlatorms[platforms])
   }
+
+  for (platforms in allPlatorms) {
+    allPlatorms[platforms] = deleteUnnecessaryRows(allPlatorms[platforms])
+  }
+
   var headers = ["type", "outerscope (if applicable)", "inner_scope", "January", "February", "March"]
-  for (var platform in allPlatorms) {
+  for (platform in allPlatorms) {
     var platform_id = platform;
-    fs.writeFile(platform_id + '.csv', headers + '\n', (err) => { //Creates header
+    fs.writeFile('./qbr_reports/' +platform_id + '.csv', headers + '\n', (err) => { //Creates header
       if (err) {
         return;
       }
     })
     for (var i = 0; i < allPlatorms[platform].length; i++) { 
-      fs.appendFile(platform_id + '.csv', allPlatorms[platform][i] + '\n', (err) => { //Add report to same file 
+      fs.appendFile('./qbr_reports/' + platform_id + '.csv', allPlatorms[platform][i] + '\n', (err) => { //Add report to same file 
         if (err) {
           return;
         } 
@@ -153,10 +194,9 @@ var generateBulkReport = function(report) {
   }
 }
 
-// generateBulkReport(report.report)
-
-client_id = ["5c803a7260e6d4002ccfb16e"];
-timestamps =[ [1575187200000, 1577865600000], [1577865600000, 1580543940000]]
-
+client_id = [
+];
+timestamps =[[1577865600000, 1580500740000], [1580544000000, 1583006340000], [1583049600000, 1585638000000]]
+//[1575187200000, 1577865540000],  DECEMBER
 getReports(client_id, timestamps)
 
