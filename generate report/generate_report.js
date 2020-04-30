@@ -3,24 +3,29 @@ const config = require('./config.json');
 const fs = require('fs');
 
 
+var query = {
+  "login": {
+    "oauth_key": `${config.oauth}`
+  },
+  "user": {
+    "fingerprint": `${config.fingerprint}`
+  },
+  "filter": {
+    "page": 1,
+    "query": {},
+    "show_report": true
+  }
+}
+
 var getReports = async function (clientId, timestamps) {// this becomes an async function
   var allReports = [];
   for (var i = 0; i < clientId.length; i++) {
     var singleClientReport = [];
     for (var j = 0; j < timestamps.length; j++) {
-      query = {
-        "login": {
-          "oauth_key": `${config.oauth}`
-        },
-        "user": {
-          "fingerprint": `${config.fingerprint}`
-        },
-        "filter": {
-          "page": 1,
-          "query": `{\"client_id\" : \"${clientId[i]}\", \"time_stamp\" : {\"$gte\" : ${timestamps[j][0]}, \"$lte\" : ${timestamps[j][1]}}}`,
-          "show_report": true
-        }
-      }
+      
+      var queryText = `{\"client_id\" : \"${clientId[i]}\", \"time_stamp\" : {\"$gte\" : ${timestamps[j][0]}, \"$lte\" : ${timestamps[j][1]}}}`;
+      query.filter.query = queryText;
+      
       try {
         const monthly_report = (await axios.post(config.url, query)).data.reports[0]
         singleClientReport.push(monthly_report);
@@ -34,7 +39,7 @@ var getReports = async function (clientId, timestamps) {// this becomes an async
   generateBulkReport(allReports, timestamps.length)
 }
 
-var generateReport = function (reports, timeframe) {
+var generateReport = function (reports) {
   var data = {};
   for (var i = 0; i < reports.length; i++) {
     var checking_subnets = reports[i]["checking_subnets"];
